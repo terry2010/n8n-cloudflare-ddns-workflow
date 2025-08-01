@@ -1,6 +1,9 @@
 # n8n-cloudflare-ddns-workflow
 n8n cloudflare ddns workflow
 
+<img width="1534" height="393" alt="图片" src="https://github.com/user-attachments/assets/90620f71-786d-4135-92ac-adfaa8182e7c" />
+
+
 ## 替换以下占位符：
 
     YOUR_CLOUDFLARE_API_TOKEN - 你的 Cloudflare API 令牌
