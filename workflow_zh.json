@@ -1,0 +1,287 @@
+{
+  "name": "update cloudflare dns",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "be3896e9-3ff9-45ac-b4ba-d205a882f20d",
+      "name": "每小时执行",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1120,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://ip.zhuikan.com",
+        "options": {}
+      },
+      "id": "53c50520-372b-4e64-b44c-d6f7e4d04d2c",
+      "name": "获取当前IP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -896,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.cloudflare.com/client/v4/zones/YOUR_ZONE_ID/dns_records?name=YOUR_DOMAIN_NAME&type=A",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_CLOUDFLARE_API_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a2aa97df-ec2d-4264-b244-16abd7de6cba",
+      "name": "查询DNS记录",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -688,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 获取当前IP数据\nlet currentIP = '';\nconst ipData = $('获取当前IP').first();\nif (ipData && ipData.json && ipData.json.data) {\n    currentIP = String(ipData.json.data).trim();\n} else {\n    throw new Error('无法获取当前IP数据');\n}\n\n// 获取DNS记录数据\nconst currentInput = $input.first().json;\nlet dnsIP = '';\nlet recordId = '';\nlet recordName = '';\n\nif (currentInput && currentInput.success && currentInput.result && currentInput.result.length > 0) {\n    const record = currentInput.result[0];\n    dnsIP = String(record.content).trim();\n    recordId = record.id;\n    recordName = record.name;\n} else {\n    throw new Error('无法获取DNS记录: ' + JSON.stringify(currentInput));\n}\n\n// 验证IP格式\nconst ipRegex = /^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$/;\nif (!ipRegex.test(currentIP)) {\n    throw new Error(`当前IP格式不正确: \\\"${currentIP}\\\"`);\n}\n\n// 比较IP是否需要更新\nlet ipChanged = false;\nlet message = '';\n\n// 处理DNS记录可能的特殊情况\nif (dnsIP.includes('*') || dnsIP.length < 7 || !ipRegex.test(dnsIP)) {\n    ipChanged = true;\n    message = `DNS记录异常(${dnsIP})，需要更新为: ${currentIP}`;\n} else {\n    ipChanged = currentIP !== dnsIP;\n    message = ipChanged ? `IP需要更新: ${dnsIP} -> ${currentIP}` : `IP相同无需更新: ${currentIP}`;\n}\n\n// 返回结果（单输出）\nreturn {\n    currentIP: currentIP,\n    dnsIP: dnsIP,\n    ipChanged: ipChanged,\n    shouldUpdate: ipChanged,\n    message: message,\n    timestamp: new Date().toISOString(),\n    recordId: recordId,\n    recordName: recordName,\n    summary: ipChanged ? '需要更新DNS记录' : 'DNS记录已是最新'\n};"
+      },
+      "id": "127a1492-a399-4048-b6a7-b6ced8d70a39",
+      "name": "比较IP差异",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.shouldUpdate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "028cb230-830c-42cc-9d46-0341a33ab59c",
+              "leftValue": "={{ $json.shouldUpdate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "b7c2e47e-5fc2-4106-9dca-21ee79cf58a2",
+      "name": "判断是否需要更新",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.cloudflare.com/client/v4/zones/YOUR_ZONE_ID/dns_records/{{ $('比较IP差异').first().json.recordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_CLOUDFLARE_API_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "type",
+              "value": "A"
+            },
+            {
+              "name": "name",
+              "value": "YOUR_DOMAIN_NAME"
+            },
+            {
+              "name": "content",
+              "value": "={{ $('比较IP差异').first().json.currentIP }}"
+            },
+            {
+              "name": "ttl",
+              "value": 300
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "befdc688-7d5a-40dc-8864-4053ecc9fb33",
+      "name": "更新DNS记录",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "bb644c98-6a21-4e6e-a102-b8f02e6c134d",
+      "name": "无需更新",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 检查更新结果\nconst updateResult = $input.first();\nconst compareResult = $('比较IP差异').first().json;\n\n// 检查是否有错误\nif (updateResult.json && updateResult.json.success === false) {\n    const errors = updateResult.json.errors || [];\n    const errorMsg = errors.length > 0 ? errors[0].message : '未知错误';\n    \n    // 检查是否是\"记录已存在\"错误（这种情况下认为成功）\n    if (errorMsg.includes('An identical record already exists')) {\n        return {\n            success: true,\n            message: `DNS记录已经是正确的IP(${compareResult.currentIP})，无需更新`,\n            currentIP: compareResult.currentIP,\n            type: 'already_correct'\n        };\n    } else {\n        return {\n            success: false,\n            message: `DNS更新失败: ${errorMsg}`,\n            error: errorMsg\n        };\n    }\n} else {\n    // 更新成功\n    return {\n        success: true,\n        message: `DNS记录已更新为: ${compareResult.currentIP}`,\n        currentIP: compareResult.currentIP,\n        type: 'updated'\n    };\n}"
+      },
+      "id": "6a0bed6b-0d02-4cac-98b0-356b21cf0238",
+      "name": "处理更新结果",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "每小时执行": {
+      "main": [
+        [
+          {
+            "node": "获取当前IP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "获取当前IP": {
+      "main": [
+        [
+          {
+            "node": "查询DNS记录",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查询DNS记录": {
+      "main": [
+        [
+          {
+            "node": "比较IP差异",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "比较IP差异": {
+      "main": [
+        [
+          {
+            "node": "判断是否需要更新",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "判断是否需要更新": {
+      "main": [
+        [
+          {
+            "node": "更新DNS记录",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "无需更新",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新DNS记录": {
+      "main": [
+        [
+          {
+            "node": "处理更新结果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "875561ff-9722-4858-90c3-00de68be3dd9",
+  "meta": {
+    "instanceId": "bb7904cac79d2f2ec80ecd45de5ea8d43a56774257ca4632322462a9930cb2ac"
+  },
+  "id": "z976ljIbT1y9MY5T",
+  "tags": []
+}
