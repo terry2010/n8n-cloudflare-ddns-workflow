@@ -7,6 +7,9 @@ n8n cloudflare ddns workflow
 - 🇺🇸 [English Guide](README_EN.md)
 - 🇯🇵 [日本語ガイド](README_JP.md)
 
+<img width="1583" height="479" alt="图片" src="https://github.com/user-attachments/assets/fe0de931-96c0-4840-a62b-836cbdff9654" />
+
+
 ## Replace these placeholders:
 
     YOUR_CLOUDFLARE_API_TOKEN - Your Cloudflare API token
