@@ -5,7 +5,7 @@ n8n cloudflare ddns workflow
 
 - 🇨🇳 [中文说明](README_CN.md)
 - 🇺🇸 [English Guide](README_EN.md)
-- 🇯🇵 [日本語ガイド](README_JP.MD)
+- 🇯🇵 [日本語ガイド](README_JP.md)
 
 ## Replace these placeholders:
 
