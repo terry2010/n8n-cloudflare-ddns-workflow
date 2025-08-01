@@ -1,6 +1,9 @@
 # n8n-cloudflare-ddns-workflow
 n8n cloudflare ddns workflow
 
+<img width="1540" height="455" alt="图片" src="https://github.com/user-attachments/assets/fe62c93f-8401-4189-8802-849f82e7ce80" />
+
+
 ## 以下のプレースホルダーを置き換えてください：
 
     YOUR_CLOUDFLARE_API_TOKEN - あなたのCloudflare APIトークン
